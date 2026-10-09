@@ -1299,7 +1299,7 @@
         </div>
         <div>
           <span class="text-xs text-muted uppercase">Exam Venue:</span>
-          <div class="font-bold text-primary">${alloc.room.name} (${alloc.room.building})</div>
+          <div class="font-bold" style="color:var(--navy-700)">${alloc.room.name} (${alloc.room.building})</div>
         </div>
         <div>
           <span class="text-xs text-muted uppercase">Exam Subject:</span>
