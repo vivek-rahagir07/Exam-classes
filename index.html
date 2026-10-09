@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ExamSeat – College Exam Seating Plan Generator</title>
+  <meta name="description" content="Modern, automated college exam seating plan generator. Configure allocation strategies, prevent cheating with branch mixing, upload student and room rosters, and export printable attendance sheets.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- SheetJS for client-side Excel (.xlsx / .xls) & CSV parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="theme-light">
+  <!-- App Container -->
+  <div class="app-layout" id="appLayout">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+              <path d="M6 6h10"/>
+              <path d="M6 10h10"/>
+              <path d="m9 16 2 2 4-4"/>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <span class="brand-title">ExamSeat</span>
+            <span class="brand-tag">Plan Generator</span>
+          </div>
+        </div>
+        <button class="btn-icon mobile-only" id="btnSidebarClose" title="Close menu" aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">MAIN MENU</div>
+        <button class="nav-item active" data-view="dashboard" id="nav-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="7" height="9" x="3" y="3" rx="1"/>
+            <rect width="7" height="5" x="14" y="3" rx="1"/>
+            <rect width="7" height="9" x="14" y="12" rx="1"/>
+            <rect width="7" height="5" x="3" y="16" rx="1"/>
+          </svg>
+          <span>Dashboard</span>
+        </button>
+
+        <button class="nav-item" data-view="students" id="nav-students">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span>Students</span>
+          <span class="badge" id="badgeStudentCount">0</span>
+        </button>
+
+        <button class="nav-item" data-view="rooms" id="nav-rooms">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 21h18"/>
+            <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
+            <path d="M9 9h1"/>
+            <path d="M9 13h1"/>
+            <path d="M9 17h1"/>
+            <path d="M14 9h1"/>
+            <path d="M14 13h1"/>
+            <path d="M14 17h1"/>
+          </svg>
+          <span>Exam Rooms</span>
+          <span class="badge" id="badgeRoomCount">0</span>
+        </button>
+
+        <div class="nav-section-title">ALLOCATION ENGINE</div>
+        <button class="nav-item" data-view="generator" id="nav-generator">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+          <span>Plan Generator</span>
+          <span class="badge badge-accent">Auto</span>
+        </button>
+
+        <button class="nav-item" data-view="plans" id="nav-plans">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <path d="M3 9h18M9 21V9"/>
+          </svg>
+          <span>Seating Plans</span>
+          <span class="badge badge-success" id="badgePlanStatus">Ready</span>
+        </button>
+
+        <button class="nav-item" data-view="reports" id="nav-reports">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect width="12" height="8" x="6" y="14"/>
+          </svg>
+          <span>Export & Print</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Footer / Demo Mode Card -->
+      <div class="sidebar-footer">
+        <div class="demo-card">
+          <div class="demo-card-header">
+            <span class="pulse-dot"></span>
+            <strong>Demo Data Mode</strong>
+          </div>
+          <p class="demo-card-text">Data is stored in localStorage. All changes persist in your browser.</p>
+          <button class="btn btn-sm btn-ghost-light w-100" id="btnResetDemoData" title="Reset all records to initial realistic demo data">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset Demo Data
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Content Area -->
+    <div class="main-wrapper">
+      <!-- Top Header Navbar -->
+      <header class="top-header">
+        <div class="header-left">
+          <button class="btn-icon mobile-only" id="btnSidebarOpen" title="Open navigation" aria-label="Open navigation">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+          </button>
+          <div>
+            <h1 class="page-title" id="pageTitle">Dashboard Overview</h1>
+            <p class="page-subtitle" id="pageSubtitle">Semester Examination Seating Plan Management</p>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <div class="exam-term-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Mid-Term Examination 2026</span>
+          </div>
+
+          <button class="btn btn-secondary" id="btnQuickLookup">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span>Student Lookup</span>
+          </button>
+
+          <button class="btn btn-primary" id="btnHeaderGenerate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>Run Generator</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Content Views Container -->
+      <main class="content-body">
+        
+        <!-- ============================================== -->
+        <!-- VIEW 1: DASHBOARD -->
+        <!-- ============================================== -->
+        <section class="view-panel active" id="view-dashboard">
+          
+          <!-- Key Metrics Grid -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-icon metric-icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <div class="metric-content">
+                <span class="metric-label">Total Students</span>
+                <span class="metric-value" id="dashTotalStudents">0</span>
+                <span class="metric-sub" id="dashEligibleSub">0 eligible for exam</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-icon metric-icon-emerald">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M9 9h1"/><path d="M14 9h1"/></svg>
+              </div>
+              <div class="metric-content">
+                <span class="metric-label">Configured Rooms</span>
+                <span class="metric-value" id="dashTotalRooms">0</span>
+                <span class="metric-sub" id="dashAvailableRoomsSub">0 available</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-icon metric-icon-purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+              </div>
+              <div class="metric-content">
+                <span class="metric-label">Total Exam Capacity</span>
+                <span class="metric-value" id="dashTotalCapacity">0</span>
+                <span class="metric-sub" id="dashCapacitySurplus">Surplus: +0 seats</span>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-icon metric-icon-amber">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+              <div class="metric-content">
+                <span class="metric-label">Plan Allocation</span>
+                <span class="metric-value" id="dashAllocationRatio">0 / 0</span>
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar" id="dashProgressBar" style="width: 0%"></div>
+                </div>
+                <span class="metric-sub" id="dashAllocationPct">0% assigned</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Action / Workflow Stepper Banner -->
+          <div class="workflow-card">
+            <div class="workflow-header">
+              <div>
+                <h2 class="section-title">Exam Seating Workflow</h2>
+                <p class="section-desc">Four streamlined steps to prepare, allocate, verify, and print your college exam seating plans.</p>
+              </div>
+              <div class="plan-status-pill" id="dashPlanBadge">
+                <span class="status-indicator ready"></span>
+                <span>Plan Generated</span>
+              </div>
+            </div>
+            
+            <div class="workflow-steps">
+              <div class="step-card" id="stepCardStudents" onclick="app.switchView('students')">
+                <div class="step-num">1</div>
+                <div class="step-details">
+                  <h4>Roster Students</h4>
+                  <p id="stepStudentStatus">48 students loaded</p>
+                </div>
+                <div class="step-action">
+                  <span>Manage</span> &rarr;
+                </div>
+              </div>
+
+              <div class="step-card" id="stepCardRooms" onclick="app.switchView('rooms')">
+                <div class="step-num">2</div>
+                <div class="step-details">
+                  <h4>Prepare Rooms</h4>
+                  <p id="stepRoomStatus">4 exam halls (90 seats)</p>
+                </div>
+                <div class="step-action">
+                  <span>Configure</span> &rarr;
+                </div>
+              </div>
+
+              <div class="step-card" id="stepCardGenerate" onclick="app.switchView('generator')">
+                <div class="step-num">3</div>
+                <div class="step-details">
+                  <h4>Algorithm Strategy</h4>
+                  <p>Anti-cheating branch mixing</p>
+                </div>
+                <div class="step-action">
+                  <span>Run</span> &rarr;
+                </div>
+              </div>
+
+              <div class="step-card" id="stepCardPrint" onclick="app.switchView('plans')">
+                <div class="step-num">4</div>
+                <div class="step-details">
+                  <h4>Print & Export</h4>
+                  <p>Door notices & attendance</p>
+                </div>
+                <div class="step-action">
+                  <span>View</span> &rarr;
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dashboard Two-Column Grid: Active Allocation Summary & Branch Distribution -->
+          <div class="dashboard-grid">
+            
+            <!-- Left Card: Current Seating Plan Overview -->
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title">Active Plan Summary</h3>
+                  <p class="card-subtitle">Overview of currently generated hall distribution</p>
+                </div>
+                <div class="card-actions">
+                  <button class="btn btn-sm btn-outline" onclick="app.switchView('plans')">
+                    Visual Seating Chart
+                  </button>
+                  <button class="btn btn-sm btn-primary" onclick="app.switchView('generator')">
+                    Re-Generate
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div id="dashActivePlanSummary">
+                  <!-- Injected via script.js -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Card: Branch & Semester Analytics -->
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title">Student Branch Breakdown</h3>
+                  <p class="card-subtitle">Department mix across enrolled candidates</p>
+                </div>
+                <span class="badge badge-primary" id="dashTotalBranchesBadge">4 Branches</span>
+              </div>
+              <div class="card-body">
+                <div class="branch-stats-list" id="dashBranchList">
+                  <!-- Injected via script.js -->
+                </div>
+
+                <div class="card-divider"></div>
+
+                <div class="quick-tips-box">
+                  <div class="tips-icon">💡</div>
+                  <div>
+                    <strong>Anti-Cheating Strategy Active:</strong>
+                    <p>The Mixed Branches algorithm automatically separates peers from identical departments into staggered seats.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Room Capacity Meter Cards on Dashboard -->
+          <div class="card mt-4">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">Room Occupancy & Hall Capacity</h3>
+                <p class="card-subtitle">Real-time seating allocation density per examination hall</p>
+              </div>
+              <button class="btn btn-sm btn-outline" onclick="app.switchView('rooms')">Manage Rooms</button>
+            </div>
+            <div class="card-body">
+              <div class="room-capacity-grid" id="dashRoomCapacityCards">
+                <!-- Injected via script.js -->
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+
+        <!-- ============================================== -->
+        <!-- VIEW 2: STUDENTS MANAGEMENT -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-students">
+          
+          <div class="section-toolbar">
+            <div class="toolbar-left">
+              <div class="search-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="studentSearchInput" placeholder="Search by roll number, name, branch...">
+              </div>
+
+              <select class="form-select filter-select" id="filterStudentBranch">
+                <option value="ALL">All Branches</option>
+              </select>
+
+              <select class="form-select filter-select" id="filterStudentSemester">
+                <option value="ALL">All Semesters</option>
+              </select>
+
+              <select class="form-select filter-select" id="filterStudentStatus">
+                <option value="ALL">All Status</option>
+                <option value="ELIGIBLE">Eligible Only</option>
+                <option value="EXCLUDED">Excluded Only</option>
+              </select>
+            </div>
+
+            <div class="toolbar-right">
+              <button class="btn btn-outline" id="btnDownloadStudentTemplate" title="Download sample CSV format">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                <span>Sample CSV</span>
+              </button>
+
+              <button class="btn btn-secondary" id="btnUploadStudentsModalOpen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                <span>Upload CSV / Excel</span>
+              </button>
+
+              <button class="btn btn-primary" id="btnAddStudentModalOpen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+                <span>Add Student</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bulk Selection Ribbon -->
+          <div class="bulk-actions-ribbon" id="studentBulkRibbon" style="display: none;">
+            <div class="bulk-info">
+              <span class="bulk-count" id="studentSelectedCount">0</span>
+              <span>students selected</span>
+            </div>
+            <div class="bulk-buttons">
+              <button class="btn btn-sm btn-outline" id="btnBulkMakeEligible">Mark as Eligible</button>
+              <button class="btn btn-sm btn-outline" id="btnBulkMakeExcluded">Exclude from Exam</button>
+              <button class="btn btn-sm btn-danger" id="btnBulkDeleteStudents">Delete Selected</button>
+            </div>
+          </div>
+
+          <!-- Students Table Card -->
+          <div class="card table-card">
+            <div class="card-header border-bottom">
+              <div class="d-flex align-center gap-2">
+                <h3 class="card-title">Enrolled Students Roster</h3>
+                <span class="badge badge-neutral" id="studentFilteredCountBadge">Showing 0 of 0</span>
+              </div>
+              <div class="d-flex align-center gap-2">
+                <button class="btn btn-sm btn-ghost" id="btnClearStudentFilters">Clear Filters</button>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table" id="studentsTable">
+                <thead>
+                  <tr>
+                    <th width="40">
+                      <input type="checkbox" id="selectAllStudents" title="Select all visible">
+                    </th>
+                    <th>Roll Number</th>
+                    <th>Full Name</th>
+                    <th>Branch / Dept</th>
+                    <th>Semester</th>
+                    <th>Course / Subject</th>
+                    <th>Exam Status</th>
+                    <th width="120" class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="studentsTableBody">
+                  <!-- Injected via script.js -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Empty State for Students -->
+            <div class="empty-state" id="studentsEmptyState" style="display: none;">
+              <div class="empty-icon">👥</div>
+              <h3>No Students Found</h3>
+              <p>No student records match your active search and filter criteria.</p>
+              <button class="btn btn-secondary mt-2" onclick="app.resetStudentFilters()">Reset Filters</button>
+            </div>
+
+            <!-- Pagination / Counter Footer -->
+            <div class="table-footer">
+              <span class="text-muted" id="studentsSummaryText">Showing all records</span>
+              <div class="table-legend">
+                <span class="legend-item"><span class="badge badge-success-subtle">Eligible</span> Included in plan generation</span>
+                <span class="legend-item"><span class="badge badge-neutral">Excluded</span> Skipped by allocator</span>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+
+        <!-- ============================================== -->
+        <!-- VIEW 3: ROOMS MANAGEMENT -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-rooms">
+          
+          <div class="section-toolbar">
+            <div class="toolbar-left">
+              <div class="search-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="roomSearchInput" placeholder="Search room name, building...">
+              </div>
+
+              <select class="form-select filter-select" id="filterRoomBuilding">
+                <option value="ALL">All Buildings / Blocks</option>
+              </select>
+
+              <select class="form-select filter-select" id="filterRoomStatus">
+                <option value="ALL">All Status</option>
+                <option value="AVAILABLE">Available Only</option>
+                <option value="DISABLED">Excluded / Inactive</option>
+              </select>
+            </div>
+
+            <div class="toolbar-right">
+              <button class="btn btn-outline" id="btnDownloadRoomTemplate" title="Download sample CSV format for rooms">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                <span>Sample CSV</span>
+              </button>
+
+              <button class="btn btn-secondary" id="btnUploadRoomsModalOpen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                <span>Upload CSV / Excel</span>
+              </button>
+
+              <button class="btn btn-primary" id="btnAddRoomModalOpen">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+                <span>Add Room</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Capacity vs Candidate Demand Alert Card -->
+          <div class="demand-alert-banner" id="roomDemandBanner">
+            <!-- Injected via script.js -->
+          </div>
+
+          <!-- Rooms Cards Grid -->
+          <div class="rooms-container" id="roomsContainer">
+            <!-- Injected via script.js -->
+          </div>
+
+          <!-- Empty State for Rooms -->
+          <div class="empty-state" id="roomsEmptyState" style="display: none;">
+            <div class="empty-icon">🏛️</div>
+            <h3>No Exam Rooms Found</h3>
+            <p>No rooms match your filter or search query. Click "Add Room" to create one.</p>
+            <button class="btn btn-primary mt-2" onclick="app.openAddRoomModal()">Add First Room</button>
+          </div>
+
+        </section>
+
+
+        <!-- ============================================== -->
+        <!-- VIEW 4: PLAN GENERATOR & CONFIGURATION -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-generator">
+          
+          <div class="generator-layout">
+            
+            <!-- Left Form: Allocation Configuration Stepper -->
+            <div class="generator-config">
+              
+              <!-- Config Block 1: Student Selection -->
+              <div class="card config-card">
+                <div class="card-header">
+                  <div class="config-step-badge">1</div>
+                  <div>
+                    <h3 class="card-title">Select Student Cohorts</h3>
+                    <p class="card-subtitle">Choose branches and semesters to seat in this exam session</p>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="form-group mb-3">
+                    <div class="d-flex justify-between align-center mb-1">
+                      <label class="form-label mb-0">Eligible Branches</label>
+                      <button class="btn btn-xs btn-ghost" id="btnToggleAllBranches">Toggle All</button>
+                    </div>
+                    <div class="cohort-checkbox-grid" id="genBranchCheckboxes">
+                      <!-- Injected via script.js -->
+                    </div>
+                  </div>
+
+                  <div class="form-group mb-2">
+                    <div class="d-flex justify-between align-center mb-1">
+                      <label class="form-label mb-0">Semester Filter</label>
+                      <button class="btn btn-xs btn-ghost" id="btnToggleAllSemesters">Toggle All</button>
+                    </div>
+                    <div class="cohort-checkbox-grid" id="genSemesterCheckboxes">
+                      <!-- Injected via script.js -->
+                    </div>
+                  </div>
+
+                  <div class="selection-counter-badge" id="genSelectedStudentsCountBadge">
+                    Selected Students: <strong>0</strong> candidates
+                  </div>
+                </div>
+              </div>
+
+              <!-- Config Block 2: Room Selection -->
+              <div class="card config-card">
+                <div class="card-header">
+                  <div class="config-step-badge">2</div>
+                  <div>
+                    <h3 class="card-title">Available Exam Halls</h3>
+                    <p class="card-subtitle">Select halls to allocate seats from</p>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="d-flex justify-between align-center mb-2">
+                    <span class="text-sm text-muted">Select active rooms:</span>
+                    <button class="btn btn-xs btn-ghost" id="btnToggleAllGenRooms">Select All</button>
+                  </div>
+                  <div class="gen-rooms-list" id="genRoomsCheckboxes">
+                    <!-- Injected via script.js -->
+                  </div>
+                  <div class="selection-counter-badge" id="genSelectedRoomsCapacityBadge">
+                    Total Selected Capacity: <strong>0</strong> seats
+                  </div>
+                </div>
+              </div>
+
+              <!-- Config Block 3: Sorting & Priority -->
+              <div class="card config-card">
+                <div class="card-header">
+                  <div class="config-step-badge">3</div>
+                  <div>
+                    <h3 class="card-title">Student Sorting & Ordering</h3>
+                    <p class="card-subtitle">How candidate records are ordered prior to seat assignment</p>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="form-group">
+                    <label class="form-label" for="genSortStrategy">Sorting Scheme</label>
+                    <select class="form-select" id="genSortStrategy">
+                      <option value="ROLL_ASC" selected>Roll Number (Ascending: 001 &rarr; 099)</option>
+                      <option value="ROLL_DESC">Roll Number (Descending: 099 &rarr; 001)</option>
+                      <option value="NAME_ASC">Student Name (A &rarr; Z)</option>
+                      <option value="NAME_DESC">Student Name (Z &rarr; A)</option>
+                      <option value="BRANCH_ROLL">Branch first, then Roll Number</option>
+                      <option value="SEM_BRANCH">Semester, then Branch, then Roll</option>
+                      <option value="RANDOM">Randomized / Shuffled (Anti-collusion)</option>
+                      <option value="UPLOAD_ORDER">Uploaded File Order (As in CSV)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group mb-0">
+                    <label class="form-label" for="genSeatPrefix">Seat Number Format</label>
+                    <select class="form-select" id="genSeatPrefix">
+                      <option value="ROOM_SEAT" selected>[RoomName]-S01, S02... (e.g. LHC101-S01)</option>
+                      <option value="ROW_COL">Grid Coordinate (e.g. R1-C1, R1-C2...)</option>
+                      <option value="SEAT_ONLY">Simple Sequential (Seat 1, Seat 2...)</option>
+                      <option value="BENCH_LR">Bench Dual (B1-L, B1-R, B2-L...)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Config Block 4: Allocation Strategy & Anti-Cheating Rules -->
+              <div class="card config-card">
+                <div class="card-header">
+                  <div class="config-step-badge">4</div>
+                  <div>
+                    <h3 class="card-title">Room Allocation Strategy</h3>
+                    <p class="card-subtitle">Determine seat assignment logic across rooms</p>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="strategy-options">
+                    <label class="strategy-option">
+                      <input type="radio" name="genStrategy" value="MIXED_BRANCHES" checked>
+                      <div class="strategy-option-body">
+                        <div class="d-flex align-center gap-2">
+                          <strong>Mixed Branches (Recommended)</strong>
+                          <span class="badge badge-accent">Anti-Cheating</span>
+                        </div>
+                        <p>Interleaves students from different branches in adjacent seats so peers from the same branch never sit next to each other.</p>
+                      </div>
+                    </label>
+
+                    <label class="strategy-option">
+                      <input type="radio" name="genStrategy" value="SEQUENTIAL">
+                      <div class="strategy-option-body">
+                        <div class="d-flex align-center gap-2">
+                          <strong>Sequential Room Filling</strong>
+                          <span class="badge badge-neutral">Standard</span>
+                        </div>
+                        <p>Fills Room 1 completely up to 100% capacity before allocating to Room 2, and so forth.</p>
+                      </div>
+                    </label>
+
+                    <label class="strategy-option">
+                      <input type="radio" name="genStrategy" value="ROUND_ROBIN">
+                      <div class="strategy-option-body">
+                        <div class="d-flex align-center gap-2">
+                          <strong>Round-Robin / Balanced Distribution</strong>
+                          <span class="badge badge-neutral">Proportional</span>
+                        </div>
+                        <p>Distributes students evenly across all selected rooms so every room shares a balanced, proportional occupancy rate.</p>
+                      </div>
+                    </label>
+
+                    <label class="strategy-option">
+                      <input type="radio" name="genStrategy" value="SPACED_CHECKERBOARD">
+                      <div class="strategy-option-body">
+                        <div class="d-flex align-center gap-2">
+                          <strong>Checkerboard / Spaced Seating</strong>
+                          <span class="badge badge-neutral">Extra Spacing</span>
+                        </div>
+                        <p>Leaves 1 empty buffer seat between consecutive examinees where capacity permits.</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Right Sidebar: Live Validation, Capacity Summary & Generate Button -->
+            <div class="generator-summary">
+              
+              <div class="card sticky-card">
+                <div class="card-header">
+                  <h3 class="card-title">Allocation Feasibility</h3>
+                  <span class="badge" id="genFeasibilityBadge">Checking...</span>
+                </div>
+                <div class="card-body">
+                  
+                  <div class="feasibility-metrics">
+                    <div class="feasibility-row">
+                      <span class="text-muted">Eligible Students:</span>
+                      <strong id="genSummaryStudentCount">0</strong>
+                    </div>
+                    <div class="feasibility-row">
+                      <span class="text-muted">Total Available Seats:</span>
+                      <strong id="genSummaryCapacityCount">0</strong>
+                    </div>
+                    <div class="feasibility-row">
+                      <span class="text-muted">Selected Halls:</span>
+                      <strong id="genSummaryRoomCount">0</strong>
+                    </div>
+                    <div class="feasibility-row highlight">
+                      <span class="text-muted">Capacity Margin:</span>
+                      <strong id="genSummarySurplus">+0 seats</strong>
+                    </div>
+                  </div>
+
+                  <!-- Progress Gauge -->
+                  <div class="mt-3">
+                    <div class="d-flex justify-between text-xs mb-1">
+                      <span class="text-muted">Capacity Utilization</span>
+                      <strong id="genSummaryUtilizationPct">0%</strong>
+                    </div>
+                    <div class="progress-bar-wrap">
+                      <div class="progress-bar" id="genSummaryProgressBar" style="width: 0%"></div>
+                    </div>
+                  </div>
+
+                  <!-- Validation Alerts Box -->
+                  <div class="validation-message-box mt-3" id="genValidationMsgBox">
+                    <!-- Injected via script.js -->
+                  </div>
+
+                  <!-- Generation CTA Button -->
+                  <button class="btn btn-primary btn-lg w-100 mt-3" id="btnExecuteGenerate">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    <span>Generate Seating Plan</span>
+                  </button>
+
+                  <p class="text-center text-xs text-muted mt-2">
+                    Guaranteed 1:1 seat assignment. No duplicates, room capacity strictly respected.
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!-- ============================================== -->
+        <!-- VIEW 5: SEATING PLANS (VISUAL & ROSTER) -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-plans">
+          
+          <!-- Plan Sub-Navigation Tabs & Actions Header -->
+          <div class="plans-subnav-bar">
+            <div class="subnav-tabs">
+              <button class="subnav-tab active" data-plantab="grid" id="tabPlanGrid">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                <span>Visual Classroom Grid</span>
+              </button>
+
+              <button class="subnav-tab" data-plantab="roster" id="tabPlanRoster">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                <span>Room Attendance Roster</span>
+              </button>
+
+              <button class="subnav-tab" data-plantab="lookup" id="tabPlanLookup">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <span>Student Hall Slip Lookup</span>
+              </button>
+
+              <button class="subnav-tab" data-plantab="stats" id="tabPlanStats">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+                <span>Occupancy Analytics</span>
+              </button>
+            </div>
+
+            <div class="plans-subnav-actions">
+              <button class="btn btn-sm btn-outline" id="btnExportCSVPlan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                <span>Export CSV</span>
+              </button>
+
+              <button class="btn btn-sm btn-primary" id="btnPrintCurrentRoomReport">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                <span>Print Room Sheet</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Room Selector Navigation Pills (Shown on Grid and Roster tabs) -->
+          <div class="room-selector-pills-bar" id="planRoomPillsBar">
+            <span class="text-xs text-muted uppercase font-bold mr-2">Select Hall:</span>
+            <div class="room-pills" id="planRoomPills">
+              <!-- Injected via script.js -->
+            </div>
+          </div>
+
+          <!-- Active Room Metadata Card -->
+          <div class="active-room-summary-banner" id="activeRoomBanner">
+            <div class="banner-left">
+              <div>
+                <h2 class="active-room-title" id="activeRoomTitle">Room LHC-101</h2>
+                <p class="active-room-meta" id="activeRoomMeta">Building: Main Complex &bull; Capacity: 30 Seats &bull; 30 Seated</p>
+              </div>
+            </div>
+            <div class="banner-right">
+              <div class="branch-pills-row" id="activeRoomBranchPills">
+                <!-- Branch breakdown pills injected via script.js -->
+              </div>
+            </div>
+          </div>
+
+          <!-- PLAN SUB-PANEL A: VISUAL CLASSROOM GRID -->
+          <div class="plan-tab-content active" id="planContent-grid">
+            
+            <div class="card visual-classroom-card">
+              <!-- Classroom Front: Blackboard & Invigilator Stage -->
+              <div class="classroom-front">
+                <div class="blackboard">
+                  <div class="board-text">BLACKBOARD / PROJECTION SCREEN &bull; FRONT OF ROOM</div>
+                </div>
+                <div class="invigilator-desk">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                  <span>Invigilator Table</span>
+                </div>
+              </div>
+
+              <!-- Interactive Desk Grid -->
+              <div class="desks-canvas-wrapper">
+                <div class="desks-grid" id="classroomDesksGrid">
+                  <!-- Desks injected via script.js -->
+                </div>
+              </div>
+
+              <!-- Legend Footer -->
+              <div class="classroom-legend" id="classroomLegend">
+                <span class="legend-title">Branch Color Key:</span>
+                <!-- Color dots injected via script.js -->
+                <span class="legend-item"><span class="desk-dot vacant"></span> Vacant / Empty Seat</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- PLAN SUB-PANEL B: ROOM ATTENDANCE ROSTER TABLE -->
+          <div class="plan-tab-content" id="planContent-roster">
+            
+            <div class="card">
+              <div class="card-header border-bottom">
+                <div>
+                  <h3 class="card-title">Hall Attendance & Verification Sheet</h3>
+                  <p class="card-subtitle">Official invigilator roster with signature verification</p>
+                </div>
+                <button class="btn btn-sm btn-outline" id="btnPrintRosterOnly">Print Roster (PDF)</button>
+              </div>
+
+              <div class="table-responsive">
+                <table class="data-table" id="rosterTable">
+                  <thead>
+                    <tr>
+                      <th width="70">Seat #</th>
+                      <th>Roll Number</th>
+                      <th>Student Name</th>
+                      <th>Branch / Dept</th>
+                      <th>Semester</th>
+                      <th>Subject / Exam</th>
+                      <th width="140">Candidate Sign</th>
+                      <th width="100">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rosterTableBody">
+                    <!-- Injected via script.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- PLAN SUB-PANEL C: STUDENT LOOKUP & HALL TICKET -->
+          <div class="plan-tab-content" id="planContent-lookup">
+            
+            <div class="lookup-panel-layout">
+              <div class="lookup-search-col">
+                <div class="card">
+                  <div class="card-header">
+                    <div>
+                      <h3 class="card-title">Instant Student Seating Lookup</h3>
+                      <p class="card-subtitle">Quick search to find exact room and seat assignment</p>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div class="search-input-wrap mb-3">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                      <input type="text" id="lookupSearchInput" placeholder="Enter student roll number or name...">
+                    </div>
+
+                    <div class="lookup-results-list" id="lookupResultsList">
+                      <!-- Results list injected via script.js -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Student Exam Pass / Slip Card -->
+              <div class="lookup-preview-col">
+                <div class="card hall-slip-card" id="studentHallSlipCard">
+                  <div class="hall-slip-header">
+                    <div class="slip-college-badge">College Examination Authority</div>
+                    <h3 class="slip-exam-title">Mid-Term Examination 2026</h3>
+                    <div class="slip-subtitle">Candidate Exam Seating Slip</div>
+                  </div>
+
+                  <div class="hall-slip-body" id="hallSlipBody">
+                    <div class="text-center text-muted p-4">Select a student from the list to preview their hall ticket.</div>
+                  </div>
+
+                  <div class="hall-slip-footer">
+                    <button class="btn btn-sm btn-outline w-100" id="btnPrintSingleSlip" disabled>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                      Print Candidate Slip
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- PLAN SUB-PANEL D: OCCUPANCY & ANALYTICS -->
+          <div class="plan-tab-content" id="planContent-stats">
+            
+            <div class="stats-overview-grid" id="planStatsCards">
+              <!-- Injected via script.js -->
+            </div>
+
+            <div class="card mt-4">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title">Room-by-Room Branch Allocation Matrix</h3>
+                  <p class="card-subtitle">Distribution of departments per examination venue</p>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="data-table" id="branchMatrixTable">
+                    <!-- Injected via script.js -->
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!-- ============================================== -->
+        <!-- VIEW 6: EXPORT & PRINTABLE REPORTS -->
+        <!-- ============================================== -->
+        <section class="view-panel" id="view-reports">
+          
+          <div class="reports-header-card card">
+            <div class="card-body">
+              <div class="d-flex justify-between align-center flex-wrap gap-3">
+                <div>
+                  <h2 class="section-title">Official Exam Seating Reports</h2>
+                  <p class="section-desc">Generate, preview, and print official notice board charts and invigilator rosters using high-res browser print-to-PDF.</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                  <button class="btn btn-outline" id="btnExportAllCSV">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    <span>Download Master CSV</span>
+                  </button>
+                  <button class="btn btn-primary" id="btnTriggerPrintReport">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                    <span>Print Document Now</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Report Format Selector Tabs -->
+          <div class="report-type-bar">
+            <button class="report-type-btn active" data-report="door-notice" id="btnReportTypeDoor">
+              🏛️ Room Door Notice Sheet
+            </button>
+            <button class="report-type-btn" data-report="invigilator-sheet" id="btnReportTypeInvigilator">
+              📋 Invigilator Attendance Roster
+            </button>
+            <button class="report-type-btn" data-report="master-chart" id="btnReportTypeMaster">
+              📑 College Master Notice Chart
+            </button>
+          </div>
+
+          <!-- Printable Document Container (Styled for Screen Preview & @media print) -->
+          <div class="printable-document-container" id="printableDocument">
+            <!-- Dynamically populated report content injected via script.js -->
+          </div>
+
+        </section>
+
+      </main>
+
+      <!-- App Footer -->
+      <footer class="app-footer">
+        <div>ExamSeat &copy; 2026 &bull; Automated College Examination Seating Plan System</div>
+        <div class="footer-links">
+          <span>Storage: <strong class="text-success">Browser localStorage</strong></span>
+          &bull;
+          <span id="footerVersion">v2.4.0 (Vanilla JS Edition)</span>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+
+  <!-- ============================================== -->
+  <!-- MODAL DIALOGS -->
+  <!-- ============================================== -->
+
+  <!-- Modal 1: Add / Edit Student Modal -->
+  <dialog class="modal-dialog" id="studentModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="studentModalTitle">Add New Student</h3>
+        <button class="btn-icon modal-close-btn" id="btnStudentModalClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+        </button>
+      </div>
+
+      <form id="studentForm">
+        <input type="hidden" id="studentFormId">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label class="form-label" for="studentRoll">Roll Number <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="studentRoll" placeholder="e.g. 23CS045" required>
+            </div>
+            <div class="form-group flex-2">
+              <label class="form-label" for="studentName">Student Full Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="studentName" placeholder="e.g. Ananya Sharma" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label class="form-label" for="studentBranch">Branch / Department <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="studentBranch" placeholder="e.g. Computer Science (CSE)" required>
+            </div>
+            <div class="form-group flex-1">
+              <label class="form-label" for="studentSemester">Semester <span class="text-danger">*</span></label>
+              <select class="form-select" id="studentSemester" required>
+                <option value="Sem 1">Sem 1</option>
+                <option value="Sem 2">Sem 2</option>
+                <option value="Sem 3">Sem 3</option>
+                <option value="Sem 4" selected>Sem 4</option>
+                <option value="Sem 5">Sem 5</option>
+                <option value="Sem 6">Sem 6</option>
+                <option value="Sem 7">Sem 7</option>
+                <option value="Sem 8">Sem 8</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="studentSubject">Course / Exam Subject</label>
+            <input type="text" class="form-control" id="studentSubject" placeholder="e.g. CS401: Data Structures">
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="checkbox-label">
+              <input type="checkbox" id="studentEligible" checked>
+              <span>Eligible to participate in this exam</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btnStudentModalCancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveStudent">Save Student</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+
+  <!-- Modal 2: Upload Students Excel / CSV Modal -->
+  <dialog class="modal-dialog modal-lg" id="uploadStudentsModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Upload Students Roster</h3>
+          <p class="modal-subtitle">Import student list from .xlsx, .xls, or .csv files with column mapping & verification</p>
+        </div>
+        <button class="btn-icon modal-close-btn" id="btnUploadStudentsModalClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- File Dropzone -->
+        <div class="file-dropzone" id="studentsDropzone">
+          <input type="file" id="studentsFileInput" accept=".csv, .xlsx, .xls" style="display: none;">
+          <div class="dropzone-icon">📁</div>
+          <h4>Drag & Drop your Excel or CSV file here</h4>
+          <p class="text-sm text-muted">Supports .xlsx, .xls, and .csv files with header row</p>
+          <button type="button" class="btn btn-outline btn-sm mt-2" onclick="document.getElementById('studentsFileInput').click()">
+            Browse File
+          </button>
+          <div class="file-chosen-name" id="studentsChosenFileName"></div>
+        </div>
+
+        <!-- Column Mapping & Validation Preview (Hidden until file selected) -->
+        <div class="upload-mapping-section" id="studentsMappingSection" style="display: none;">
+          <h4 class="mt-3 mb-2">Column Mapping</h4>
+          <p class="text-xs text-muted mb-3">Map the headers found in your file to ExamSeat student fields:</p>
+          
+          <div class="mapping-grid">
+            <div class="mapping-field">
+              <label>Roll Number *</label>
+              <select class="form-select form-select-sm" id="mapStudentRoll"></select>
+            </div>
+            <div class="mapping-field">
+              <label>Full Name *</label>
+              <select class="form-select form-select-sm" id="mapStudentName"></select>
+            </div>
+            <div class="mapping-field">
+              <label>Branch / Dept *</label>
+              <select class="form-select form-select-sm" id="mapStudentBranch"></select>
+            </div>
+            <div class="mapping-field">
+              <label>Semester</label>
+              <select class="form-select form-select-sm" id="mapStudentSemester"></select>
+            </div>
+            <div class="mapping-field">
+              <label>Subject / Course</label>
+              <select class="form-select form-select-sm" id="mapStudentSubject"></select>
+            </div>
+          </div>
+
+          <!-- Preview & Validation Warnings -->
+          <div class="upload-validation-banner mt-3" id="studentsValidationBanner">
+            <!-- Validation status injected -->
+          </div>
+
+          <div class="preview-table-wrap mt-2">
+            <h5 class="text-xs text-muted uppercase font-bold mb-1">Parsed Rows Preview (First 5 records):</h5>
+            <div class="table-responsive">
+              <table class="data-table data-table-sm" id="studentsPreviewTable">
+                <thead id="studentsPreviewHead"></thead>
+                <tbody id="studentsPreviewBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="import-mode-choice mt-3">
+            <label class="radio-label">
+              <input type="radio" name="studentImportMode" value="APPEND" checked>
+              <span>Append to existing records</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="studentImportMode" value="REPLACE">
+              <span>Replace entire student roster</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnUploadStudentsCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmStudentImport" disabled>
+          Import Students
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+
+  <!-- Modal 3: Add / Edit Room Modal -->
+  <dialog class="modal-dialog" id="roomModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="roomModalTitle">Add Exam Room</h3>
+        <button class="btn-icon modal-close-btn" id="btnRoomModalClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+        </button>
+      </div>
+
+      <form id="roomForm">
+        <input type="hidden" id="roomFormId">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label class="form-label" for="roomName">Room / Hall Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="roomName" placeholder="e.g. LHC-101" required>
+            </div>
+            <div class="form-group flex-2">
+              <label class="form-label" for="roomBuilding">Building / Block <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="roomBuilding" placeholder="e.g. Main Complex" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label class="form-label" for="roomRows">Rows</label>
+              <input type="number" class="form-control" id="roomRows" min="1" max="25" value="5" required>
+            </div>
+            <div class="form-group flex-1">
+              <label class="form-label" for="roomCols">Columns (Desks/Row)</label>
+              <input type="number" class="form-control" id="roomCols" min="1" max="25" value="6" required>
+            </div>
+            <div class="form-group flex-1">
+              <label class="form-label" for="roomCapacity">Capacity (Seats) <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" id="roomCapacity" min="1" max="500" value="30" required>
+            </div>
+          </div>
+          <p class="text-xs text-muted mt-n2 mb-3">Capacity can equal Rows &times; Columns or custom count.</p>
+
+          <div class="form-group">
+            <label class="form-label" for="roomNotes">Special Instructions / Features</label>
+            <input type="text" class="form-control" id="roomNotes" placeholder="e.g. Air-conditioned, CCTV enabled">
+          </div>
+
+          <div class="form-group mb-0">
+            <label class="checkbox-label">
+              <input type="checkbox" id="roomAvailable" checked>
+              <span>Available for seating allocation</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btnRoomModalCancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveRoom">Save Room</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+
+  <!-- Modal 4: Upload Rooms Excel / CSV Modal -->
+  <dialog class="modal-dialog modal-lg" id="uploadRoomsModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Upload Examination Rooms</h3>
+          <p class="modal-subtitle">Import room inventory from .xlsx, .xls, or .csv files</p>
+        </div>
+        <button class="btn-icon modal-close-btn" id="btnUploadRoomsModalClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="file-dropzone" id="roomsDropzone">
+          <input type="file" id="roomsFileInput" accept=".csv, .xlsx, .xls" style="display: none;">
+          <div class="dropzone-icon">🏛️</div>
+          <h4>Drag & Drop your Rooms Excel or CSV file here</h4>
+          <p class="text-sm text-muted">Supports columns: Room Name, Building, Capacity, Rows, Columns</p>
+          <button type="button" class="btn btn-outline btn-sm mt-2" onclick="document.getElementById('roomsFileInput').click()">
+            Browse File
+          </button>
+          <div class="file-chosen-name" id="roomsChosenFileName"></div>
+        </div>
+
+        <div class="upload-mapping-section" id="roomsMappingSection" style="display: none;">
+          <h4 class="mt-3 mb-2">Room Column Mapping</h4>
+          <div class="mapping-grid">
+            <div class="mapping-field">
+              <label>Room Name *</label>
+              <select class="form-select form-select-sm" id="mapRoomName"></select>
+            </div>
+            <div class="mapping-field">
+              <label>Building / Block *</label>
+              <select class="form-select form-select-sm" id="mapRoomBuilding"></select>
+            </div>
+            <div class="mapping-field">
+              <label>Capacity *</label>
+              <select class="form-select form-select-sm" id="mapRoomCapacity"></select>
+            </div>
+            <div class="mapping-field">
+              <label>Grid Rows</label>
+              <select class="form-select form-select-sm" id="mapRoomRows"></select>
+            </div>
+            <div class="mapping-field">
+              <label>Grid Columns</label>
+              <select class="form-select form-select-sm" id="mapRoomCols"></select>
+            </div>
+          </div>
+
+          <div class="upload-validation-banner mt-3" id="roomsValidationBanner"></div>
+
+          <div class="import-mode-choice mt-3">
+            <label class="radio-label">
+              <input type="radio" name="roomImportMode" value="APPEND" checked>
+              <span>Append to existing rooms</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="roomImportMode" value="REPLACE">
+              <span>Replace entire room inventory</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnUploadRoomsCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmRoomImport" disabled>
+          Import Rooms
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+
+  <!-- Modal 5: Student Desk Seat Detail Card Tooltip Modal -->
+  <dialog class="modal-dialog modal-sm" id="seatDetailModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="d-flex align-center gap-2">
+          <span class="seat-badge-icon" id="seatModalBadge">S01</span>
+          <h3 class="modal-title" id="seatModalTitle">Seat Details</h3>
+        </div>
+        <button class="btn-icon modal-close-btn" id="btnSeatModalClose" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="seatModalContent">
+        <!-- Injected via script.js -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary w-100" id="btnSeatModalDone">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+
+  <!-- Modal 6: Confirmation Dialog Modal -->
+  <dialog class="modal-dialog modal-sm" id="confirmModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="confirmModalTitle">Please Confirm</h3>
+      </div>
+      <div class="modal-body">
+        <p id="confirmModalMessage">Are you sure you want to proceed?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnConfirmCancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btnConfirmOk">Confirm</button>
+      </div>
+    </div>
+  </dialog>
+
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Main Vanilla JS Script -->
+  <script src="script.js"></script>
+</body>
+</html>
