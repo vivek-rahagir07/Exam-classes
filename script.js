@@ -1,7 +1,7 @@
 /**
  * ExamSeat – College Exam Seating Plan Generator
  * Modern Vanilla JavaScript Frontend Engine
- * Storage: HTML5 localStorage (Demo Data Mode)
+ * Storage: HTML5 localStorage
  */
 
 (function () {
@@ -43,102 +43,7 @@
     return `hsl(${hue}, 70%, 45%)`;
   }
 
-  // =========================================================================
-  // DEFAULT DEMO SEED DATA
-  // =========================================================================
-  function getDemoSeedData() {
-    const branches = [
-      { name: 'Computer Science (CSE)', code: 'CSE', subject: 'CS401: Algorithms & Data Structures' },
-      { name: 'Electronics (ECE)', code: 'ECE', subject: 'EC402: Microprocessors & VLSI' },
-      { name: 'Mechanical (ME)', code: 'ME', subject: 'ME403: Thermodynamics & Fluids' },
-      { name: 'Information Tech (IT)', code: 'IT', subject: 'IT404: Web Systems & Security' }
-    ];
 
-    const firstNames = [
-      'Aarav', 'Aditi', 'Akash', 'Ananya', 'Aryan', 'Bhavya', 'Chirag', 'Deepak',
-      'Divya', 'Gaurav', 'Isha', 'Ishaan', 'Kabir', 'Kavya', 'Manish', 'Neha',
-      'Nikhil', 'Pooja', 'Pranav', 'Priya', 'Rahul', 'Rhea', 'Rishi', 'Rohan',
-      'Sakshi', 'Sameer', 'Sanya', 'Shreya', 'Siddharth', 'Sneha', 'Tanvi', 'Tarun',
-      'Utkarsh', 'Varun', 'Vidya', 'Vikram', 'Yash', 'Zoya', 'Karan', 'Meera',
-      'Rajat', 'Simran', 'Kunal', 'Aniket', 'Nandini', 'Harsh', 'Preeti', 'Abhishek'
-    ];
-
-    const lastNames = [
-      'Sharma', 'Verma', 'Patel', 'Reddy', 'Mehta', 'Nair', 'Singh', 'Gupta',
-      'Joshi', 'Chopra', 'Malhotra', 'Bose', 'Iyer', 'Menon', 'Kulkarni', 'Deshmukh'
-    ];
-
-    const students = [];
-    let count = 0;
-
-    branches.forEach((branch, bIdx) => {
-      const cohortSize = bIdx === 0 ? 14 : bIdx === 1 ? 12 : bIdx === 2 ? 11 : 11; // 48 students total
-      for (let i = 1; i <= cohortSize; i++) {
-        count++;
-        const fn = firstNames[(count - 1) % firstNames.length];
-        const ln = lastNames[(count + bIdx) % lastNames.length];
-        const numStr = String(i).padStart(3, '0');
-        const roll = `23${branch.code}${numStr}`;
-        const sem = i % 2 === 0 ? 'Sem 4' : 'Sem 6';
-
-        students.push({
-          id: `stu_${Date.now()}_${count}`,
-          rollNumber: roll,
-          name: `${fn} ${ln}`,
-          branch: branch.name,
-          semester: sem,
-          subject: branch.subject,
-          eligible: true,
-          email: `${fn.toLowerCase()}.${ln.toLowerCase()}@college.edu`
-        });
-      }
-    });
-
-    const rooms = [
-      {
-        id: 'room_lhc101',
-        name: 'LHC-101',
-        building: 'Main Complex Block A',
-        rows: 4,
-        cols: 6,
-        capacity: 24,
-        notes: 'Air-conditioned, Overhead Projector',
-        available: true
-      },
-      {
-        id: 'room_lh204',
-        name: 'LH-204',
-        building: 'Science & Tech Block',
-        rows: 4,
-        cols: 5,
-        capacity: 20,
-        notes: 'CCTV Surveillance Active',
-        available: true
-      },
-      {
-        id: 'room_lab3',
-        name: 'TechLab-3',
-        building: 'IT Computing Center',
-        rows: 4,
-        cols: 4,
-        capacity: 16,
-        notes: 'Partitioned desks, Power sockets',
-        available: true
-      },
-      {
-        id: 'room_hallb',
-        name: 'Seminar Hall B',
-        building: 'Auditorium Wing',
-        rows: 5,
-        cols: 6,
-        capacity: 30,
-        notes: 'Tiered stadium seating',
-        available: true
-      }
-    ];
-
-    return { students, rooms };
-  }
 
   // =========================================================================
   // STATE MANAGEMENT
@@ -169,31 +74,14 @@
       const storedRooms = localStorage.getItem(STORAGE_KEYS.ROOMS);
       const storedPlan = localStorage.getItem(STORAGE_KEYS.PLAN);
 
-      if (!storedStudents || !storedRooms) {
-        const demo = getDemoSeedData();
-        state.students = demo.students;
-        state.rooms = demo.rooms;
-        saveStudents();
-        saveRooms();
-      } else {
-        state.students = JSON.parse(storedStudents);
-        state.rooms = JSON.parse(storedRooms);
-      }
-
-      if (storedPlan) {
-        state.plan = JSON.parse(storedPlan);
-      } else {
-        // Automatically generate a default plan using seed data so the user immediately sees a working plan
-        generateDefaultPlan();
-      }
+      state.students = storedStudents ? JSON.parse(storedStudents) : [];
+      state.rooms    = storedRooms    ? JSON.parse(storedRooms)    : [];
+      state.plan     = storedPlan     ? JSON.parse(storedPlan)     : null;
     } catch (e) {
-      console.error('Error loading localStorage state, using fresh demo data:', e);
-      const demo = getDemoSeedData();
-      state.students = demo.students;
-      state.rooms = demo.rooms;
-      saveStudents();
-      saveRooms();
-      generateDefaultPlan();
+      console.error('Error loading localStorage state — starting fresh:', e);
+      state.students = [];
+      state.rooms    = [];
+      state.plan     = null;
     }
   }
 
@@ -639,8 +527,12 @@
     document.getElementById('dashAllocationPct').textContent = `${utilizationPct}% exam hall occupancy`;
 
     // Workflow Stepper text
-    document.getElementById('stepStudentStatus').textContent = `${totalStudents} students (${eligibleStudents} active)`;
-    document.getElementById('stepRoomStatus').textContent = `${availableRooms} rooms (${totalCapacity} seats)`;
+    document.getElementById('stepStudentStatus').textContent = totalStudents === 0
+      ? 'No students added yet'
+      : `${totalStudents} students (${eligibleStudents} eligible)`;
+    document.getElementById('stepRoomStatus').textContent = availableRooms === 0
+      ? 'No rooms configured yet'
+      : `${availableRooms} rooms (${totalCapacity} seats)`;
 
     // Active Plan Summary Card
     const summaryBox = document.getElementById('dashActivePlanSummary');
@@ -1151,10 +1043,26 @@
   // --- Render Plans View ---
   function renderPlansView() {
     if (!state.plan || !state.plan.roomPlans) {
-      showToast('No active plan found. Please generate one first.', 'info');
-      switchView('generator');
+      document.getElementById('planRoomPills').innerHTML = '';
+      document.getElementById('activeRoomTitle').textContent = 'No Seating Plan Generated';
+      document.getElementById('activeRoomMeta').textContent = 'Add students & rooms, then run the Plan Generator.';
+      document.getElementById('activeRoomBranchPills').innerHTML = '';
+      document.getElementById('classroomDesksGrid').innerHTML = `
+        <div class="empty-state" style="grid-column:1/-1;padding:3rem;">
+          <div class="empty-icon">📋</div>
+          <h3>No Seating Plan Yet</h3>
+          <p>Configure students &amp; rooms, then generate a plan to see classroom layouts here.</p>
+          <button class="btn btn-primary mt-2" onclick="app.switchView('generator')">Go to Plan Generator</button>
+        </div>`;
+      document.getElementById('rosterTableBody').innerHTML =
+        `<tr><td colspan="8" class="text-center text-muted" style="padding:2.5rem;">No plan generated yet. Use the <strong>Plan Generator</strong> to create one.</td></tr>`;
+      document.getElementById('lookupResultsList').innerHTML =
+        `<div class="text-muted" style="padding:1rem;">No plan generated yet.</div>`;
+      document.getElementById('planStatsCards').innerHTML = '';
+      document.getElementById('branchMatrixTable').innerHTML = '';
       return;
     }
+
 
     // Ensure valid active room
     const roomKeys = Object.keys(state.plan.roomPlans);
@@ -1487,10 +1395,16 @@
   // --- Render Reports View ---
   function renderReportsView() {
     if (!state.plan) {
-      showToast('Generate a seating plan first to view printable reports.', 'info');
-      switchView('generator');
+      document.getElementById('printableDocument').innerHTML = `
+        <div class="empty-state" style="padding:4rem;">
+          <div class="empty-icon">🖨️</div>
+          <h3>No Report to Display</h3>
+          <p>Generate a seating plan first, then come back here to print door notices, attendance rosters, and master charts.</p>
+          <button class="btn btn-primary mt-2" onclick="app.switchView('generator')">Go to Plan Generator</button>
+        </div>`;
       return;
     }
+
 
     const container = document.getElementById('printableDocument');
     const activeRP = state.plan.roomPlans[state.activeRoomIdForPlan || Object.keys(state.plan.roomPlans)[0]];
@@ -2277,14 +2191,20 @@
     downloadCSV(sampleCSV, 'ExamSeat_Sample_Rooms.csv');
   }
 
-  function resetAllToDefaultDemoData() {
+  function clearAllData() {
     openConfirmDialog({
-      title: 'Reset Demo Data',
-      message: 'This will reset all students, rooms, and seating plans back to the default realistic demo dataset. Continue?',
+      title: 'Clear All Data',
+      message: 'This will permanently delete all students, rooms, and seating plans stored in this browser. Are you sure?',
       onConfirm: () => {
-        localStorage.clear();
-        loadState();
-        showToast('All demo records restored successfully.', 'success');
+        localStorage.removeItem(STORAGE_KEYS.STUDENTS);
+        localStorage.removeItem(STORAGE_KEYS.ROOMS);
+        localStorage.removeItem(STORAGE_KEYS.PLAN);
+        state.students = [];
+        state.rooms = [];
+        state.plan = null;
+        state.selectedStudentIds.clear();
+        state.activeRoomIdForPlan = null;
+        showToast('All data cleared successfully.', 'success');
         switchView('dashboard');
       }
     });
@@ -2316,7 +2236,7 @@
     document.getElementById('sidebarOverlay').addEventListener('click', closeMobileSidebar);
 
     // Header Quick Action Buttons
-    document.getElementById('btnResetDemoData').addEventListener('click', resetAllToDefaultDemoData);
+    document.getElementById('btnResetDemoData').addEventListener('click', clearAllData);
     document.getElementById('btnHeaderGenerate').addEventListener('click', () => switchView('generator'));
     document.getElementById('btnQuickLookup').addEventListener('click', () => {
       switchView('plans');
