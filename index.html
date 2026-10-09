@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="style.css">
   <!-- SheetJS for client-side Excel (.xlsx / .xls) & CSV parsing -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- html2pdf.js for client-side high-resolution multi-page PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body class="theme-light">
   <!-- App Container -->
@@ -784,7 +786,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                 <span>Export CSV</span>
               </button>
-
+              <button class="btn btn-sm btn-secondary" id="btnExportPlanPDF">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" x2="12" y1="18" y2="12"/><line x1="9" x2="15" y1="15" y2="15"/></svg>
+                <span>Export PDF</span>
+              </button>
               <button class="btn btn-sm btn-primary" id="btnPrintCurrentRoomReport">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                 <span>Print Room Sheet</span>
@@ -975,11 +980,15 @@
                 <div class="d-flex gap-2 flex-wrap">
                   <button class="btn btn-outline" id="btnExportAllCSV">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                    <span>Download Master CSV</span>
+                    <span>Master CSV</span>
                   </button>
-                  <button class="btn btn-primary" id="btnTriggerPrintReport">
+                  <button class="btn btn-secondary" id="btnTriggerPrintReport">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-                    <span>Print Document Now</span>
+                    <span>Print Document</span>
+                  </button>
+                  <button class="btn btn-primary" id="btnExportCompletePDF">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" x2="12" y1="18" y2="12"/><line x1="9" x2="15" y1="15" y2="15"/></svg>
+                    <span>Export Complete PDF</span>
                   </button>
                 </div>
               </div>
@@ -996,6 +1005,9 @@
             </button>
             <button class="report-type-btn" data-report="master-chart" id="btnReportTypeMaster">
               📑 College Master Notice Chart
+            </button>
+            <button class="report-type-btn" data-report="complete-package" id="btnReportTypeComplete">
+              📦 Complete Exam Package (All Rooms)
             </button>
           </div>
 

@@ -878,32 +878,127 @@ img, svg { max-width: 100%; }
   display: inline-flex; align-items: center; gap: 0.4rem;
 }
 
-.desks-canvas-wrapper { overflow-x: auto; padding-bottom: 0.75rem; }
-.desks-grid { display: grid; gap: 0.75rem; justify-content: center; margin: 0 auto; }
+.desks-canvas-wrapper {
+  overflow-x: auto;
+  padding: 1rem 0.5rem 1.25rem;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.desks-grid {
+  display: grid;
+  gap: 0.85rem;
+  justify-content: center;
+  margin: 0 auto;
+  width: max-content;
+  max-width: 100%;
+}
 
 .desk-item {
-  width: 115px; height: 82px;
-  background: #fff; border: 2px solid var(--border);
-  border-radius: var(--r-md); padding: 0.45rem;
-  display: flex; flex-direction: column; justify-content: space-between;
+  width: 140px;
+  min-height: 86px;
+  background: #ffffff;
+  border: 1.5px solid var(--border);
+  border-top-width: 4px;
+  border-radius: var(--r-md);
+  padding: 0.5rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   cursor: pointer;
   transition: transform var(--dur) var(--ease), box-shadow var(--dur), border-color var(--dur);
-  position: relative; box-shadow: var(--sh-xs);
+  position: relative;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
+  overflow: hidden; /* CRITICAL: No child element can spill outside desk */
 }
-.desk-item:hover { transform: translateY(-3px) scale(1.03); box-shadow: var(--sh-md); border-color: var(--blue-500); z-index: 5; }
-.desk-item.vacant { background: var(--bg-subtle); border-style: dashed; border-color: #cbd5e1; opacity: 0.7; }
+.desk-item:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: var(--sh-md);
+  border-color: var(--blue-500);
+  z-index: 5;
+}
+.desk-item.vacant {
+  background: var(--bg-subtle);
+  border-style: dashed;
+  border-color: #cbd5e1;
+  opacity: 0.75;
+}
 
-.desk-header { display: flex; justify-content: space-between; align-items: center; }
-.desk-num    { font-size: 0.62rem; font-weight: 800; font-family: var(--mono); background: #0f172a; color: #fff; padding: 0.08rem 0.3rem; border-radius: 3px; }
-.desk-branch-tag { font-size: 0.6rem; font-weight: 700; padding: 0.08rem 0.3rem; border-radius: 3px; color: #fff; }
-.desk-body { margin: auto 0; text-align: center; }
-.desk-roll { font-size: 0.67rem; font-family: var(--mono); font-weight: 700; color: var(--navy-900); }
-.desk-name { font-size: 0.62rem; color: var(--txt-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; margin: 0 auto; }
+.desk-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  width: 100%;
+}
+.desk-num {
+  font-size: 0.65rem;
+  font-weight: 800;
+  font-family: var(--mono);
+  background: #0f172a;
+  color: #fff;
+  padding: 0.12rem 0.35rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+.desk-branch-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.12rem 0.35rem;
+  border-radius: 4px;
+  color: #fff;
+  white-space: nowrap;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.desk-body {
+  margin: auto 0;
+  text-align: center;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.desk-roll {
+  font-size: 0.72rem;
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--navy-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+.desk-name {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--txt-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+  margin-top: 2px;
+  line-height: 1.25;
+}
 
 .classroom-legend {
-  display: flex; align-items: center; justify-content: center;
-  flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; padding-top: 1.1rem;
-  border-top: 1px solid var(--border); font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
 }
 .legend-title { font-weight: 700; color: var(--txt-muted); }
 .desk-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
@@ -1188,8 +1283,6 @@ img, svg { max-width: 100%; }
   .plans-subnav-bar { flex-direction: column; align-items: stretch; }
   .plans-subnav-actions { flex-direction: row; }
 
-  .desk-item { width: 95px; height: 70px; }
-
   .app-footer { flex-direction: column; text-align: center; }
 
   .modal-dialog, .modal-dialog.modal-lg, .modal-dialog.modal-sm {
@@ -1217,29 +1310,119 @@ img, svg { max-width: 100%; }
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   @MEDIA PRINT
+   PDF & PRINT ENGINE STYLING
    ════════════════════════════════════════════════════════════════════════ */
+.html2pdf__page-break, .print-page-break {
+  page-break-before: always !important;
+  break-before: page !important;
+  display: block;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  clear: both;
+}
+
+.pdf-page-wrapper {
+  background: #ffffff;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-sm);
+  border: 1px solid var(--border);
+  page-break-after: always;
+  break-after: page;
+}
+
+.pdf-summary-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.pdf-stat-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+}
+.pdf-stat-val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--navy-800);
+}
+.pdf-stat-lbl {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-top: 0.2rem;
+}
+
 @media print {
   .sidebar, .top-header, .app-footer,
   .plans-subnav-bar, .reports-header-card, .report-type-bar,
   .room-selector-pills-bar, .toast-container,
-  .section-toolbar, button, .btn, .mobile-only { display: none !important; }
+  .section-toolbar, button, .btn, .mobile-only, dialog { display: none !important; }
 
-  body, html { background: #fff !important; color: #000 !important; font-size: 10pt; }
+  body, html {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 9.5pt;
+    overflow: visible !important;
+  }
 
   .main-wrapper { margin-left: 0 !important; }
   .content-body { padding: 0 !important; }
 
   .printable-document-container {
-    border: none !important; box-shadow: none !important;
-    padding: 0 !important; max-width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
     overflow-x: visible !important;
   }
 
-  .print-page-break { page-break-before: always; }
+  .pdf-page-wrapper {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin-bottom: 0 !important;
+  }
 
-  .data-table { border: 1px solid #000 !important; }
+  .print-sheet-header {
+    margin-bottom: 1rem !important;
+  }
+
+  .data-table {
+    border: 1px solid #1e293b !important;
+    page-break-inside: auto;
+  }
+  .data-table tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
   .data-table th, .data-table td {
-    border: 1px solid #000 !important; padding: 4px 8px !important; color: #000 !important;
+    border: 1px solid #334155 !important;
+    padding: 5px 8px !important;
+    color: #000 !important;
+    font-size: 8.5pt !important;
+  }
+  .data-table th {
+    background-color: #f1f5f9 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-meta-grid {
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-signatures-row {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 }

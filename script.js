@@ -1120,7 +1120,7 @@
     const rows = Number(roomPlan.room.rows) || 4;
     const cols = Number(roomPlan.room.cols) || 6;
 
-    gridEl.style.gridTemplateColumns = `repeat(${cols}, 130px)`;
+    gridEl.style.gridTemplateColumns = `repeat(${cols}, minmax(135px, 155px))`;
     gridEl.innerHTML = '';
 
     // Create a 2D map of allocated seats
@@ -1143,25 +1143,28 @@
 
           deskEl.className = 'desk-item';
           deskEl.style.borderTop = `4px solid ${color}`;
+          deskEl.title = `Seat ${seat.seatNumber}: ${seat.student.name} (${seat.student.rollNumber}) • Click for full details`;
           deskEl.innerHTML = `
             <div class="desk-header">
               <span class="desk-num">${seat.seatNumber}</span>
-              <span class="desk-branch-tag" style="background: ${color};">${shortBranch}</span>
+              <span class="desk-branch-tag" style="background: ${color};" title="${seat.student.branch}">${shortBranch}</span>
             </div>
             <div class="desk-body">
-              <div class="desk-roll">${seat.student.rollNumber}</div>
+              <div class="desk-roll" title="${seat.student.rollNumber}">${seat.student.rollNumber}</div>
               <div class="desk-name" title="${seat.student.name}">${seat.student.name}</div>
             </div>
           `;
           deskEl.addEventListener('click', () => openSeatDetailModal(seat, roomPlan.room));
         } else {
           deskEl.className = 'desk-item vacant';
+          deskEl.title = `Row ${r + 1}, Col ${c + 1} - Vacant / Buffer Seat`;
           deskEl.innerHTML = `
             <div class="desk-header">
               <span class="desk-num" style="background: #94a3b8;">R${r + 1}-C${c + 1}</span>
+              <span class="text-xs text-muted" style="font-size: 0.58rem; font-weight: 700;">VACANT</span>
             </div>
-            <div class="desk-body text-muted text-xs">
-              Vacant
+            <div class="desk-body text-muted text-xs" style="margin: 4px 0;">
+              Buffer Seat
             </div>
           `;
         }
@@ -1553,7 +1556,372 @@
           <div>Date: __________________</div>
         </div>
       `;
+    } else if (state.activeReportType === 'complete-package') {
+      // Comprehensive multi-room package (All Rooms + Master Directory)
+      container.innerHTML = generateCompletePackageHTML();
     }
+  }
+
+  // --- Complete Package HTML Generator ---
+  function generateCompletePackageHTML() {
+    if (!state.plan || !state.plan.roomPlans) {
+      return '<div class="p-4 text-center text-muted">No plan available to generate full package.</div>';
+    }
+
+    const stats = state.plan.stats || {};
+    const rooms = Object.values(state.plan.roomPlans);
+    const dateStr = state.plan.formattedDate || new Date().toLocaleDateString('en-US', { dateStyle: 'full' });
+
+    let html = `
+      <!-- PAGE 1: MASTER SUMMARY & COVER SHEET -->
+      <div class="pdf-page-wrapper">
+        <div class="print-sheet-header">
+          <div class="print-institution">CENTRAL COLLEGE OF ENGINEERING & TECHNOLOGY</div>
+          <div class="print-exam-name">MID-TERM SEMESTER EXAMINATION 2026</div>
+          <div class="print-doc-title">MASTER EXAMINATION SEATING PLAN & VENUE DIRECTORY</div>
+        </div>
+
+        <div class="print-meta-grid" style="margin-bottom: 1.25rem;">
+          <div><strong>Examination Date:</strong> ${dateStr}</div>
+          <div><strong>Session:</strong> Morning (09:30 AM – 12:30 PM)</div>
+          <div><strong>Total Examinees:</strong> ${stats.totalAllocated || 0} Candidates</div>
+          <div><strong>Venues Utilized:</strong> ${stats.roomCount || rooms.length} Halls</div>
+          <div><strong>Total Capacity:</strong> ${stats.totalCapacity || 0} Seats</div>
+          <div><strong>Seat Occupancy:</strong> ${stats.occupancyPct || '0%'}</div>
+        </div>
+
+        <div class="print-section-block">
+          <h4 style="font-size: 0.95rem; margin-bottom: 0.6rem; text-transform: uppercase; font-weight: 700; color: #1e293b;">
+            Examination Venue Summary & Capacity Utilization:
+          </h4>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Hall / Venue</th>
+                <th>Building</th>
+                <th style="text-align:center;">Capacity</th>
+                <th style="text-align:center;">Seated</th>
+                <th style="text-align:center;">Vacant</th>
+                <th style="text-align:center;">Occupancy</th>
+                <th>Branches Represented</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rooms.map(rp => {
+                const seated = rp.allocatedCount || 0;
+                const cap = rp.room.capacity || 0;
+                const vacant = Math.max(0, cap - seated);
+                const pct = cap > 0 ? Math.round((seated / cap) * 100) + '%' : '0%';
+                const branches = Object.entries(rp.branchCounts || {})
+                  .map(([b, count]) => `${b}: ${count}`)
+                  .join(', ') || '—';
+                return `
+                  <tr>
+                    <td><strong>${rp.room.name}</strong></td>
+                    <td>${rp.room.building}</td>
+                    <td style="text-align:center;">${cap}</td>
+                    <td style="text-align:center; font-weight:700; color:#1e40af;">${seated}</td>
+                    <td style="text-align:center; color:#64748b;">${vacant}</td>
+                    <td style="text-align:center; font-weight:700;">${pct}</td>
+                    <td style="font-size: 0.78rem;">${branches}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="print-signatures-row" style="margin-top: 2.5rem;">
+          <div>Prepared By: Examination Cell</div>
+          <div>Center Superintendent Signature: __________________</div>
+        </div>
+      </div>
+    `;
+
+    // FOR EACH ROOM: DOOR NOTICE & ATTENDANCE ROSTER
+    rooms.forEach(rp => {
+      // Room Door Notice Page
+      html += `
+        <div class="html2pdf__page-break print-page-break"></div>
+        <div class="pdf-page-wrapper">
+          <div class="print-sheet-header">
+            <div class="print-institution">CENTRAL COLLEGE OF ENGINEERING & TECHNOLOGY</div>
+            <div class="print-exam-name">MID-TERM SEMESTER EXAMINATION 2026</div>
+            <div class="print-doc-title">HALL DOOR NOTICE: ${rp.room.name} (${rp.room.building})</div>
+          </div>
+
+          <div class="print-meta-grid">
+            <div><strong>Hall / Venue:</strong> ${rp.room.name}</div>
+            <div><strong>Building:</strong> ${rp.room.building}</div>
+            <div><strong>Date & Session:</strong> ${dateStr}</div>
+            <div><strong>Candidates:</strong> ${rp.allocatedCount}</div>
+            <div><strong>Capacity:</strong> ${rp.room.capacity} Seats</div>
+            <div><strong>Invigilator:</strong> ___________________</div>
+          </div>
+
+          <div class="print-section-block">
+            <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem; text-transform: uppercase; font-weight:700;">Alphabetical Roll Call & Desk Allocation:</h4>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th width="75">Desk #</th>
+                  <th>Roll Number</th>
+                  <th>Candidate Name</th>
+                  <th>Branch</th>
+                  <th>Semester</th>
+                  <th>Subject</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rp.seats.map(seat => `
+                  <tr>
+                    <td><strong class="roll-code">${seat.seatNumber}</strong></td>
+                    <td><span class="roll-code">${seat.student.rollNumber}</span></td>
+                    <td><strong>${seat.student.name}</strong></td>
+                    <td>${seat.student.branch}</td>
+                    <td>${seat.student.semester || 'Sem 4'}</td>
+                    <td class="text-xs">${seat.student.subject || '—'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="print-signatures-row">
+            <div>Prepared By: Examination Cell</div>
+            <div>Center Superintendent Signature: __________________</div>
+          </div>
+        </div>
+
+        <!-- Room Attendance & Verification Roster Page -->
+        <div class="html2pdf__page-break print-page-break"></div>
+        <div class="pdf-page-wrapper">
+          <div class="print-sheet-header">
+            <div class="print-institution">CENTRAL COLLEGE OF ENGINEERING & TECHNOLOGY</div>
+            <div class="print-exam-name">OFFICIAL INVIGILATOR ATTENDANCE & VERIFICATION ROSTER</div>
+            <div class="print-doc-title">VENUE: ${rp.room.name} (${rp.room.building})</div>
+          </div>
+
+          <div class="print-meta-grid">
+            <div><strong>Hall Name:</strong> ${rp.room.name}</div>
+            <div><strong>Session:</strong> Morning (09:30 AM – 12:30 PM)</div>
+            <div><strong>Registered Candidates:</strong> ${rp.allocatedCount}</div>
+            <div><strong>Present:</strong> _____</div>
+            <div><strong>Absent:</strong> _____</div>
+            <div><strong>Answer Booklets Issued:</strong> _____</div>
+          </div>
+
+          <div class="print-section-block">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th width="70">Seat #</th>
+                  <th>Roll Number</th>
+                  <th>Candidate Name</th>
+                  <th>Subject</th>
+                  <th width="140">Candidate Signature</th>
+                  <th width="120">Answer Book #</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rp.seats.map(seat => `
+                  <tr>
+                    <td><strong class="roll-code">${seat.seatNumber}</strong></td>
+                    <td><span class="roll-code">${seat.student.rollNumber}</span></td>
+                    <td><strong>${seat.student.name}</strong></td>
+                    <td class="text-xs">${seat.student.subject || '—'}</td>
+                    <td style="border-bottom: 1px dashed #000; height: 32px;"></td>
+                    <td style="border-bottom: 1px dashed #000;"></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="print-signatures-row">
+            <div>Invigilator 1 Signature: __________________</div>
+            <div>Invigilator 2 Signature: __________________</div>
+          </div>
+        </div>
+      `;
+    });
+
+    // MASTER DIRECTORY PAGE
+    html += `
+      <div class="html2pdf__page-break print-page-break"></div>
+      <div class="pdf-page-wrapper">
+        <div class="print-sheet-header">
+          <div class="print-institution">CENTRAL COLLEGE OF ENGINEERING & TECHNOLOGY</div>
+          <div class="print-exam-name">MASTER CANDIDATE HALL DIRECTORY (NOTICE BOARD)</div>
+          <div class="print-doc-title">ALL REGISTERED CANDIDATES & ALLOCATED HALLS</div>
+        </div>
+
+        <div class="print-meta-grid">
+          <div><strong>Total Examinees:</strong> ${stats.totalAllocated || 0}</div>
+          <div><strong>Exam Venues:</strong> ${stats.roomCount || rooms.length} Halls</div>
+          <div><strong>Date & Session:</strong> ${dateStr}</div>
+        </div>
+
+        <div class="print-section-block">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Roll Number</th>
+                <th>Student Name</th>
+                <th>Branch / Dept</th>
+                <th>Exam Hall</th>
+                <th>Building</th>
+                <th style="text-align:center;">Assigned Seat #</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Object.values(state.plan.studentLookup || {}).map(alloc => `
+                <tr>
+                  <td><span class="roll-code">${alloc.student.rollNumber}</span></td>
+                  <td><strong>${alloc.student.name}</strong></td>
+                  <td>${alloc.student.branch}</td>
+                  <td><strong>${alloc.room.name}</strong></td>
+                  <td>${alloc.room.building}</td>
+                  <td style="text-align:center;"><strong class="roll-code">${alloc.seatNumber}</strong></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="print-signatures-row">
+          <div>Controller of Examinations: __________________</div>
+          <div>Date: __________________</div>
+        </div>
+      </div>
+    `;
+
+    return html;
+  }
+
+  // --- PDF Export Engine ---
+  function exportCompletePackageToPDF() {
+    if (!state.plan || !state.plan.roomPlans) {
+      showToast('No active seating plan found to export.', 'warning');
+      return;
+    }
+
+    if (typeof window.html2pdf !== 'function') {
+      showToast('Opening print dialogue — select "Save as PDF" to download.', 'info');
+      switchView('reports');
+      setReportType('complete-package');
+      setTimeout(() => window.print(), 350);
+      return;
+    }
+
+    showToast('Generating official PDF document, please wait...', 'info');
+
+    // Create off-screen render container
+    const printWrapper = document.createElement('div');
+    printWrapper.id = 'tempPdfPrintWrapper';
+    printWrapper.style.position = 'absolute';
+    printWrapper.style.left = '-9999px';
+    printWrapper.style.top = '0';
+    printWrapper.style.width = '794px'; // Standard A4 width in px
+    printWrapper.style.background = '#ffffff';
+    printWrapper.style.color = '#000000';
+    printWrapper.style.fontFamily = "'Plus Jakarta Sans', system-ui, sans-serif";
+    printWrapper.innerHTML = generateCompletePackageHTML();
+    document.body.appendChild(printWrapper);
+
+    const filename = `Exam_Seating_Plan_Complete_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        letterRendering: true,
+        logging: false,
+        scrollY: 0
+      },
+      jsPDF: {
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait'
+      },
+      pagebreak: {
+        mode: ['css', 'legacy'],
+        before: '.html2pdf__page-break'
+      }
+    };
+
+    window.html2pdf()
+      .set(opt)
+      .from(printWrapper)
+      .save()
+      .then(() => {
+        showToast('Complete PDF downloaded successfully! 📄', 'success');
+        if (printWrapper.parentNode) document.body.removeChild(printWrapper);
+      })
+      .catch(err => {
+        console.error('PDF export error:', err);
+        showToast('Direct PDF export encountered an issue. Opening print preview...', 'info');
+        if (printWrapper.parentNode) document.body.removeChild(printWrapper);
+        switchView('reports');
+        setReportType('complete-package');
+        setTimeout(() => window.print(), 350);
+      });
+  }
+
+  function exportCurrentReportToPDF() {
+    if (!state.plan) {
+      showToast('No active seating plan found to export.', 'warning');
+      return;
+    }
+
+    const reportEl = document.getElementById('printableDocument');
+    if (!reportEl) return;
+
+    if (typeof window.html2pdf !== 'function') {
+      window.print();
+      return;
+    }
+
+    showToast('Generating PDF document, please wait...', 'info');
+
+    const typeName = state.activeReportType || 'Report';
+    const filename = `Exam_${typeName}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        letterRendering: true,
+        logging: false
+      },
+      jsPDF: {
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait'
+      },
+      pagebreak: {
+        mode: ['css', 'legacy'],
+        before: '.html2pdf__page-break'
+      }
+    };
+
+    window.html2pdf()
+      .set(opt)
+      .from(reportEl)
+      .save()
+      .then(() => {
+        showToast('PDF exported successfully! 📄', 'success');
+      })
+      .catch(err => {
+        console.error('PDF generation error:', err);
+        window.print();
+      });
   }
 
   // --- Seat Detail Modal ---
@@ -2453,6 +2821,17 @@
     // Exports and Printing
     document.getElementById('btnExportCSVPlan').addEventListener('click', exportPlanToCSV);
     document.getElementById('btnExportAllCSV').addEventListener('click', exportPlanToCSV);
+
+    const btnExportCompletePDF = document.getElementById('btnExportCompletePDF');
+    if (btnExportCompletePDF) {
+      btnExportCompletePDF.addEventListener('click', exportCompletePackageToPDF);
+    }
+
+    const btnExportPlanPDF = document.getElementById('btnExportPlanPDF');
+    if (btnExportPlanPDF) {
+      btnExportPlanPDF.addEventListener('click', exportCompletePackageToPDF);
+    }
+
     document.getElementById('btnPrintCurrentRoomReport').addEventListener('click', () => {
       switchView('reports');
       setReportType('door-notice');
@@ -2511,6 +2890,9 @@
     updateGeneratorFeasibility,
     setActivePlanRoom,
     selectLookupStudent,
+    setReportType,
+    exportCompletePackageToPDF,
+    exportCurrentReportToPDF,
     resetStudentFilters: () => {
       document.getElementById('studentSearchInput').value = '';
       document.getElementById('filterStudentBranch').value = 'ALL';
